@@ -29,10 +29,14 @@ router.post('/einvoices', async (req, res) => {
 
 	const signedQRCodeBuffer = await convertJWTToBuffer(response['data']['data']['SignedQRCode']);
 
+	const companyID = req['headers']['companyid'];
+	const paymentID = req['headers']['paymentid'] || 0;
+	const creditnoteID = req['headers']['creditnoteid'] || 0;
+
 	const einvoiceData = new Einvoice({
-		companyID: req['headers']['companyid'],
-		paymentID: req['headers']['paymentid'] || 0,
-		creditnoteID: req['headers']['creditnoteid'] || 0,
+		companyID: companyID,
+		paymentID: paymentID,
+		creditnoteID: creditnoteID,
 		invoiceReferenceNumber: response['data']['data']['Irn'],
 		qrCode: signedQRCodeBuffer,
 		registrationDate: new Date(response['data']['data']['AckDt']),
@@ -44,12 +48,32 @@ router.post('/einvoices', async (req, res) => {
 
 		const responseData = {
 			invoiceReferenceNumber: response['data']['data']['Irn'],
+			qrCodeImageURL: `${req.protocol}://${req.get('host')}/einvoices/qrcode?companyID=${companyID}&paymentID=${paymentID}&creditnoteID=${creditnoteID}`
 		};
 
 		res.status(201).send({success: true, message: 'IRN generated successfully.', data: responseData});
 	} catch(e) {
 		console.log(e);
 		res.status(400).send({success: false, message: 'Something went wrong. Contact the support team for assistance.'});
+	}
+});
+
+router.get('/einvoices/qrcode', async (req, res) => {
+	const paymentID = req['query']['paymentID'] || 0;
+	const creditnoteID = req['query']['creditnoteID'] || 0;
+	const companyID = req['query']['companyID'] || 0;
+
+	try {
+		const einvoiceData = await Einvoice.findOne({companyID, paymentID, creditnoteID}).select('qrCode');
+		if(!einvoiceData)
+			throw new Error();
+
+		res.status(200);
+		res.set('Content-Type', 'image/png');
+		res.send(einvoiceData['qrCode']);
+	} catch(e) {
+		console.log(e);
+		res.status(400).send();
 	}
 });
 
