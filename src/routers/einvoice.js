@@ -11,9 +11,9 @@ router.post('/einvoices/generateIRN', async (req, res) => {
 	if(!authToken)
 		return res.status(400).send({success: false, message: 'Unable to generate the authentication token.'});
 
-	const postURL = `${process.env.MASTERGST_GENERATE_INVOICE_URL}?email=${process.env.MASTERGST_MAIL_ADDRESS}`;
+	const requestURL = `${process.env.MASTERGST_GENERATE_INVOICE_URL}?email=${process.env.MASTERGST_MAIL_ADDRESS}`;
 
-	const headers = {
+	const requestHeaders = {
 		'ip_address': '127.0.0.1',
 		'client_id': process.env.MASTERGST_CLIENT_ID,
 		'client_secret': process.env.MASTERGST_CLIENT_SECRET_ID,
@@ -22,7 +22,7 @@ router.post('/einvoices/generateIRN', async (req, res) => {
 		'gstin': req['headers']['gstin']
 	};
 
-	const response = await axios.post(postURL, req['body'], {headers});
+	const response = await axios.post(requestURL, req['body'], {headers: requestHeaders});
 
 	if(response['data']['status_cd'] == 0)
 		return res.status(400).send({success: false, message: 'Unable to generate the E-Invoice.'});
@@ -103,16 +103,55 @@ router.get('/einvoices/getIRN', async (req, res) => {
 	}
 });
 
-router.post('einvoices/cancelIRN', async (req, res) => {
-	const invoiceReferenceNumber = req['invoiceReferenceNumber'] || '';
+router.post('/einvoices/cancelIRN', async (req, res) => {
+	const invoiceReferenceNumber = req['body']['invoiceReferenceNumber'] || '';
+	const companyID = req['headers']['companyid'];
+	const paymentID = req['headers']['paymentid'] || 0;
+	const creditnoteID = req['headers']['creditnoteid'] || 0;
 
-	if(!invoiceReferenceNumber)
+	if(!invoiceReferenceNumber || !companyID || (!paymentID && !creditnoteID))
 		res.status(400).send({success: false, message: 'Invalid request.'});
 
 	try {
 		const einvoiceData = await Einvoice.findOne({invoiceReferenceNumber});
 
-		console.log(einvoiceData);
+		if(!einvoiceData)
+			res.status(404).send({success: false, message: `No transaction found with the IRN: ${invoiceReferenceNumber}`});
+
+		// Add validation to check if the current time is past 24 hours since generation of the IRN.
+
+		const authToken = await EinvoiceComponent.generateAuthToken(req);
+		if(!authToken)
+			return res.status(400).send({success: false, message: 'Unable to generate the authentication token.'});
+
+		const requestURL = `${process.env.MASTERGST_CANCEL_INVOICE_URL}?email=${process.env.MASTERGST_MAIL_ADDRESS}`;
+
+		const requestHeaders = {
+			'ip_address': '127.0.0.1',
+			'client_id': process.env.MASTERGST_CLIENT_ID,
+			'client_secret': process.env.MASTERGST_CLIENT_SECRET_ID,
+			'username': req['headers']['username'],
+			'auth-token': authToken,
+			'gstin': req['headers']['gstin']
+		};
+
+		const requestBody = {
+			'Irn': invoiceReferenceNumber,
+			'CnlRsn': '1',
+			'CnlRem': 'Wrong entry'
+		}
+
+		const response = await axios.post(requestURL, requestBody, {headers: requestHeaders});
+
+		if(response['data']['status_cd'] == 0)
+			return res.status(400).send({success: false, message: 'Unable to cancel the E-Invoice.'});
+
+		await Einvoice.findOneAndUpdate({invoiceReferenceNumber}, {cancellationDate: new Date(response['data']['data']['CancelDate'])});
+
+		res.status(201).send({success: true, message: 'IRN cancelled successfully'});
+	} catch(e) {
+		console.log(e);
+		res.status(201).send({success: false, message: 'Could not process the request.'});
 	}
 });
 
