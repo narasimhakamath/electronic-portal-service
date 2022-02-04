@@ -58,11 +58,7 @@ router.post('/einvoices/generateIRN', async (req, res) => {
 	}
 });
 
-<<<<<<< HEAD
 router.get('/einvoices/getQRCode', async (req, res) => {
-=======
-router.get('/einvoices/qrcode', async (req, res) => {
->>>>>>> b72f5210abf2c7cf9af6c1ab6963e18f1943e351
 	const companyID = req['query']['companyID'] || 0;
 	const paymentID = req['query']['paymentID'] || 0;
 	const creditnoteID = req['query']['creditnoteID'] || 0;
@@ -81,11 +77,7 @@ router.get('/einvoices/qrcode', async (req, res) => {
 	}
 });
 
-<<<<<<< HEAD
 router.get('/einvoices/getIRN', async (req, res) => {
-=======
-router.get('/einvoices', async (req, res) => {
->>>>>>> b72f5210abf2c7cf9af6c1ab6963e18f1943e351
 	const companyID = req['query']['companyID'] || 0;
 	const paymentID = req['query']['paymentID'] || 0;
 	const creditnoteID = req['query']['creditnoteID'] || 0;
@@ -101,11 +93,7 @@ router.get('/einvoices', async (req, res) => {
 		const responseData = {
 			invoiceReferenceNumber: einvoiceData['invoiceReferenceNumber'],
 			registrationDate: einvoiceData['registrationDate'],
-<<<<<<< HEAD
 			qrCodeImageURL: `${req.protocol}://${req.get('host')}/einvoices/getQRCode?companyID=${companyID}&paymentID=${paymentID}&creditnoteID=${creditnoteID}`
-=======
-			qrCodeImageURL: `${req.protocol}://${req.get('host')}/einvoices/qrcode?companyID=${companyID}&paymentID=${paymentID}&creditnoteID=${creditnoteID}`
->>>>>>> b72f5210abf2c7cf9af6c1ab6963e18f1943e351
 		};
 
 		res.status(200).send({success: true, message: 'Transaction found.', data: responseData});
