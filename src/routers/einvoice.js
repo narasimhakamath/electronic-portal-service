@@ -6,7 +6,7 @@ const {convertJWTToBuffer} = require('../utilities');
 
 const router = express.Router();
 
-router.post('/einvoices', async (req, res) => {
+router.post('/einvoices/generateIRN', async (req, res) => {
 	const authToken = await EinvoiceComponent.generateAuthToken(req);
 	if(!authToken)
 		return res.status(400).send({success: false, message: 'Unable to generate the authentication token.'});
@@ -40,7 +40,7 @@ router.post('/einvoices', async (req, res) => {
 		invoiceReferenceNumber: response['data']['data']['Irn'],
 		qrCode: signedQRCodeBuffer,
 		registrationDate: new Date(response['data']['data']['AckDt']),
-		responseJSON: JSON.stringify(response['data'])
+		responseBody: JSON.stringify(response['data'])
 	});
 
 	try {
@@ -48,7 +48,7 @@ router.post('/einvoices', async (req, res) => {
 
 		const responseData = {
 			invoiceReferenceNumber: response['data']['data']['Irn'],
-			qrCodeImageURL: `${req.protocol}://${req.get('host')}/einvoices/qrcode?companyID=${companyID}&paymentID=${paymentID}&creditnoteID=${creditnoteID}`
+			qrCodeImageURL: `${req.protocol}://${req.get('host')}/einvoices/getQRCode?companyID=${companyID}&paymentID=${paymentID}&creditnoteID=${creditnoteID}`
 		};
 
 		res.status(201).send({success: true, message: 'IRN generated successfully.', data: responseData});
@@ -58,10 +58,10 @@ router.post('/einvoices', async (req, res) => {
 	}
 });
 
-router.get('/einvoices/qrcode', async (req, res) => {
+router.get('/einvoices/getQRCode', async (req, res) => {
+	const companyID = req['query']['companyID'] || 0;
 	const paymentID = req['query']['paymentID'] || 0;
 	const creditnoteID = req['query']['creditnoteID'] || 0;
-	const companyID = req['query']['companyID'] || 0;
 
 	try {
 		const einvoiceData = await Einvoice.findOne({companyID, paymentID, creditnoteID}).select('qrCode');
@@ -74,6 +74,45 @@ router.get('/einvoices/qrcode', async (req, res) => {
 	} catch(e) {
 		console.log(e);
 		res.status(400).send();
+	}
+});
+
+router.get('/einvoices/getIRN', async (req, res) => {
+	const companyID = req['query']['companyID'] || 0;
+	const paymentID = req['query']['paymentID'] || 0;
+	const creditnoteID = req['query']['creditnoteID'] || 0;
+
+	if(companyID == 0 || (paymentID == 0 && creditnoteID == 0))
+		res.status(400).send({success: false, message: 'Invalid request.'});
+
+	try {
+		const einvoiceData = await Einvoice.findOne({companyID, paymentID, creditnoteID}).select('invoiceReferenceNumber registrationDate');
+		if(!einvoiceData)
+			res.status(404).send({success: false, message: 'No transaction found in the system for the requested parameters.'});
+
+		const responseData = {
+			invoiceReferenceNumber: einvoiceData['invoiceReferenceNumber'],
+			registrationDate: einvoiceData['registrationDate'],
+			qrCodeImageURL: `${req.protocol}://${req.get('host')}/einvoices/getQRCode?companyID=${companyID}&paymentID=${paymentID}&creditnoteID=${creditnoteID}`
+		};
+
+		res.status(200).send({success: true, message: 'Transaction found.', data: responseData});
+	} catch(e) {
+		console.log(e);
+		res.status(400).send({success: false, message: 'Could not process the request.'});
+	}
+});
+
+router.post('einvoices/cancelIRN', async (req, res) => {
+	const invoiceReferenceNumber = req['invoiceReferenceNumber'] || '';
+
+	if(!invoiceReferenceNumber)
+		res.status(400).send({success: false, message: 'Invalid request.'});
+
+	try {
+		const einvoiceData = await Einvoice.findOne({invoiceReferenceNumber});
+
+		console.log(einvoiceData);
 	}
 });
 

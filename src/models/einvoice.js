@@ -27,8 +27,8 @@ const einvoiceSchema = new mongoose.Schema({
 	cancellationDate: {
 		type: Date,
 	},
-	responseJSON: {
-		type: String,
+	responseBody: {
+		type: Object,
 		required: true
 	}
 }, {
@@ -42,7 +42,7 @@ einvoiceSchema.methods.toJSON = function() {
 	return einvoiceDataObject;
 }
 
-einvoiceSchema.index({companyID: 1, paymentID: 1, creditnoteID: 1 }, {unique: true});
+einvoiceSchema.index({companyID: 1, paymentID: 1, creditnoteID: 1}, {unique: true});
 
 const Einvoice = mongoose.model('Einvoice', einvoiceSchema);
 module.exports = Einvoice;
