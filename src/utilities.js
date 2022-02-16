@@ -11,12 +11,20 @@ const convertJWTToBuffer = async (jsonwebtoken) => {
     return bufferData;
 }
 
-const cacheAuthenticationToken = async (companyID, warehouseID, authenticationToken) => {
+const setAuthenticationTokenCache = async (companyID, warehouseID, authenticationToken) => {
     await redisClient.connect();
     await redisClient.setEx(`${companyID}_${warehouseID}`, process.env.MASTERGST_TOKEN_EXPIRY, authenticationToken);
 }
 
+const getAuthenticationTokenCache = async (companyID, warehouseID) => {
+    const token = await redisClient.connect();
+    return await redisClient.get(`${companyID}_${warehouseID}`);
+}
+
+getAuthTokenCache(1, 2);
+
 module.exports = {
     convertJWTToBuffer,
-    cacheAuthenticationToken
+    setAuthenticationTokenCache,
+    getAuthenticationTokenCache
 };
