@@ -1,10 +1,10 @@
-const mysql = require('mysql');
+const SQLDatabase = require('./sqldatabase');
 
-const masterDB = mysql.createConnection({
+const signupDB = new SQLDatabase({
 	host: process.env.BIZOM_MYSQL_HOST,
 	user: process.env.BIZOM_MYSQL_USERNAME,
 	password: process.env.BIZOM_MYSQL_PASSWORD,
 	database: process.env.BIZOM_SIGNUP_DATABASE
 });
 
-module.exports = masterDB;
+module.exports = signupDB;

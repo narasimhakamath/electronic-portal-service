@@ -1,6 +1,8 @@
 const QRCode = require('qrcode');
 const redis = require('redis');
 
+const signupDB = require('./database/bizomsignup');
+
 const redisClient = redis.createClient({
     host: 'localhost',
     port: 6379
@@ -21,10 +23,17 @@ const getAuthenticationTokenCache = async (companyID, warehouseID) => {
     return await redisClient.get(`${companyID}_${warehouseID}`);
 }
 
-getAuthTokenCache(1, 2);
+const getTenantDBNameByID = async (companyID) => {
+    const data = await signupDB.query(`SELECT dbname FROM companies WHERE id=${companyID}`);
+    if(!data || !data[0]['dbname'])
+        throw new Error('Tenant not found.');
+
+    return data[0]['dbname'];
+}
 
 module.exports = {
     convertJWTToBuffer,
     setAuthenticationTokenCache,
-    getAuthenticationTokenCache
+    getAuthenticationTokenCache,
+    getTenantDBNameByID
 };
